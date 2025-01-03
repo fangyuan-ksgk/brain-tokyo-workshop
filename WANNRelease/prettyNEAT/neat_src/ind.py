@@ -195,7 +195,7 @@ class Ind():
     # - Weight mutation
     # [Canonical NEAT: 10% of weights are fully random...but seriously?]
     mutatedWeights = np.random.rand(1,nConn) < p['prob_mutConn'] # Choose weights to mutate
-    weightChange = mutatedWeights * np.random.randn(1,nConn) * p['ann_mutSigma']
+    weightChange = mutatedWeights * np.random.randn(1,nConn) * p['ann_mutSigma'] # additive Gaussian noise  
     connG[3,:] += weightChange[0]
     
     # Clamp weight strength [ Warning given for nan comparisons ]  
