@@ -38,41 +38,51 @@ def getNodeOrder(nodeG,connG):
   node = np.copy(nodeG)
   nIns = len(node[0,node[1,:] == 1]) + len(node[0,node[1,:] == 4])
   nOuts = len(node[0,node[1,:] == 2])
-  
+
   # Create connection and initial weight matrices
   conn[3,conn[4,:]==0] = np.nan # disabled but still connected
   src  = conn[1,:].astype(int)
   dest = conn[2,:].astype(int)
-  
-  lookup = node[0,:].astype(int)
-  for i in range(len(lookup)): # Can we vectorize this?
-    src[np.where(src==lookup[i])] = i
-    dest[np.where(dest==lookup[i])] = i
-  
+
+  # Reordering node : input, bias, output, hidden 
+  reordered_index = np.r_[node[0, node[1, :] ==1], node[0,node[1,:] == 4], node[0,node[1,:] == 2], node[0,node[1,:] == 3]]
+
+  # Get Edge on reordered nodes 
+  src_mask = (src.reshape(-1, 1) == reordered_index.reshape(1, -1)) # (n_conn, n_node)
+  dest_mask = (dest.reshape(-1, 1) == reordered_index.reshape(1, -1))
+  src = (src_mask @ np.arange(len(reordered_index)).reshape(-1, 1)).flatten()  # Convert to 1D
+  dest = (dest_mask @ np.arange(len(reordered_index)).reshape(-1, 1)).flatten()  # Convert to 1D
+
+  # Create weight matrix according to reordered nodes
   wMat = np.zeros((np.shape(node)[1],np.shape(node)[1]))
-  wMat[src,dest] = conn[3,:]
+  wMat[src,dest] = conn[3,:] # assign weight to the connection
+
+  # Get connection matrix (connection between hidden nodes)
   connMat = wMat[nIns+nOuts:,nIns+nOuts:]
   connMat[connMat!=0] = 1
 
-  # Topological Sort of Hidden Nodes
-  edge_in = np.sum(connMat,axis=0)
+  # Topological Sort of Hidden Nodes (according to connection matrix)
+  # Q : sorted "local index" of hidden nodes (smallest index 0)
+  edge_in = np.sum(connMat,axis=0) # sum of edges ending with each node
   Q = np.where(edge_in==0)[0]  # Start with nodes with no incoming connections
   for i in range(len(connMat)):
-    if (len(Q) == 0) or (i >= len(Q)):
-      Q = []
-      return False, False # Cycle found, can't sort
-    edge_out = connMat[Q[i],:]
-    edge_in  = edge_in - edge_out # Remove nodes' conns from total
-    nextNodes = np.setdiff1d(np.where(edge_in==0)[0], Q)
-    Q = np.hstack((Q,nextNodes))
+      if (len(Q) == 0) or (i >= len(Q)):
+          Q = []
+          # return False, False # Cycle found, can't sort
+      edge_out = connMat[Q[i],:]
+      edge_in  = edge_in - edge_out # Remove nodes' conns from total
+      nextNodes = np.setdiff1d(np.where(edge_in==0)[0], Q)
+      Q = np.hstack((Q,nextNodes))
 
-    if sum(edge_in) == 0:
-      break
-  
+      if sum(edge_in) == 0:
+          break
+
   # Add In and outs back and reorder wMat according to sort
-  Q += nIns+nOuts
-  Q = np.r_[lookup[:nIns], Q, lookup[nIns:nIns+nOuts]]
-  wMat = wMat[np.ix_(Q,Q)]
+  Q += nIns+nOuts # Shifted local index due to reordering (input, bias, output, hidden) 
+
+  Q = np.r_[np.arange(nIns),              
+          Q,                              
+          np.arange(nIns,nIns+nOuts)]     
   
   return Q, wMat
 

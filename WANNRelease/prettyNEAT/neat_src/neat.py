@@ -5,6 +5,7 @@ import json
 
 from domain import *  # Task environments
 from utils import *
+from .ind import Ind
 from .nsga_sort import nsga_sort
 
 
@@ -25,7 +26,7 @@ class Neat():
                 [0,:] == Innovation Number
                 [1,:] == Source
                 [2,:] == Destination
-                [3,:] == New Node?
+                [3,:] == New Node? (id)
                 [4,:] == Generation evolved
       gen     - (int)      - Current generation
     """
@@ -83,6 +84,7 @@ class Neat():
     
     # Node Activations
     node[2,:] = p['ann_initAct']
+    
     # - Create Conns -
     nConn = (p['ann_nInput']+1) * p['ann_nOutput']
     ins   = np.arange(0,p['ann_nInput']+1,1)            # Input and Bias Ids
@@ -99,15 +101,17 @@ class Neat():
     pop = []
     for i in range(p['popSize']):
         newInd = Ind(conn, node)
-        newInd.conn[3,:] = (2*(np.random.rand(1,nConn)-0.5))*p['ann_absWCap']
-        newInd.conn[4,:] = np.random.rand(1,nConn) < p['prob_initEnable']
-        newInd.express()
+        newInd.conn[3,:] = (2*(np.random.rand(1,nConn)-0.5))*p['ann_absWCap'] # [-w_cap, w_cap] uniform random weight
+        newInd.conn[4,:] = np.random.rand(1,nConn) < p['prob_initEnable'] # enable or disable
+        newInd.express() # interesting to see what goes in here
         newInd.birth = 0
         pop.append(copy.deepcopy(newInd))  
+        
     # - Create Innovation Record -
     innov = np.zeros([5,nConn])
     innov[0:3,:] = pop[0].conn[0:3,:]
-    innov[3,:] = -1
+    innov[3,:] = -1 # New Node ID: -1 indicates non-new node
+    innov[4,:] = 0  # Generation evolved
     
     self.pop = pop
     self.innov = innov

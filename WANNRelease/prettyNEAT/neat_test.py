@@ -7,7 +7,7 @@ np.set_printoptions(linewidth=160)
 from neat_src import * # NEAT
 from domain   import * # Task environments
 
-def main(argv):
+def main(args):
   """Tests network on task N times and returns mean fitness.
   """
   infile  = args.infile
@@ -67,4 +67,3 @@ if __name__ == "__main__":
 
   args = parser.parse_args()
   main(args)                             
-  
