@@ -219,7 +219,7 @@ class Ind():
     Args:
       connG    - (np_array) - connection genes
                  [5 X nUniqueGenes] 
-                 [0,:] == Innovation Number (unique Id)
+                 [0,:] == Innovation Number (unique Id) (Ascending order)
                  [1,:] == Source Node Id
                  [2,:] == Destination Node Id
                  [3,:] == Weight Value
@@ -231,7 +231,7 @@ class Ind():
                  [2,:] == Activation function (as int)
       innov    - (np_array) - innovation record
                  [5 X nUniqueGenes]
-                 [0,:] == Innovation Number
+                 [0,:] == Innovation Number (Ascending order)
                  [1,:] == Source
                  [2,:] == Destination
                  [3,:] == New Node?
@@ -259,6 +259,21 @@ class Ind():
       return connG, nodeG, innov # No active connections, nothing to split
     connSplit  = connActive[np.random.randint(len(connActive))]
     
+    # Check if this split already exists in innovation record
+    if innov is not None:
+        srcNode = connG[1,connSplit]  # Source of connection being split
+        dstNode = connG[2,connSplit]  # Destination of connection being split
+        
+        # Find all cases where a new node was added (innov[3,:] != -1)
+        newNodeMask = innov[3,:] != -1
+        # Among those, find where source and destination match
+        matchingSrc = innov[1,newNodeMask] == srcNode
+        matchingDst = innov[2,newNodeMask] == dstNode
+        
+        if np.any(matchingSrc & matchingDst):
+            # This exact split already exists in innovation record
+            return connG, nodeG, innov
+          
     # Create new node
     newActivation = p['ann_actRange'][np.random.randint(len(p['ann_actRange']))]
     newNode = np.array([[newNodeId, 3, newActivation]]).T
