@@ -30,19 +30,19 @@ def speciate(self):
   """Divides population into species and assigns each a number of offspring/
   """
   # Readbility
-  p = self.p
-  pop = self.pop
-  species = self.species
+  p = self.p # algorithm hyperparameters
+  pop = self.pop # population
+  species = self.species # species
 
   if p['alg_speciate'] == 'neat':
     # Adjust species threshold to track desired number of species
-    if len(species) > p['spec_target']:
+    if len(species) > p['spec_target']: # increase threshold to decrease number of species
       p['spec_thresh'] += p['spec_compatMod']
 
-    if len(species) < p['spec_target']:
+    if len(species) < p['spec_target']: # decrease threshold to increase number of species
       p['spec_thresh'] -= p['spec_compatMod']
 
-    if p['spec_thresh'] < p['spec_threshMin']:
+    if p['spec_thresh'] < p['spec_threshMin']: # not too small threshold, otherwise species are the same
       p['spec_thresh'] = p['spec_threshMin']
 
     species, pop = self.assignSpecies  (species, pop, p)
@@ -134,7 +134,7 @@ def assignOffspring(self, species, pop, p):
     # -- Fitness Sharing
     # Rank all individuals
     popFit = np.asarray([ind.fitness for ind in pop])
-    popRank = tiedRank(popFit)
+    popRank = tiedRank(popFit) # fitter individuals get higher rank score
     if p['select_rankWeight'] == 'exp':
       rankScore = 1/popRank
     elif p['select_rankWeight'] == 'lin':
@@ -142,6 +142,7 @@ def assignOffspring(self, species, pop, p):
     else:
       print("Invalid rank weighting (using linear)")
       rankScore = 1+abs(popRank-len(popRank))
+      
     specId = np.asarray([ind.species for ind in pop])
 
     # Best and Average Fitness of Each Species
@@ -172,7 +173,7 @@ def assignOffspring(self, species, pop, p):
       speciesFit = np.ones((nSpecies,1))
       print("WARN: Entire population stagnant, continuing without extinction")
       
-    offspring = bestIntSplit(speciesFit, p['popSize'])
+    offspring = bestIntSplit(speciesFit, p['popSize']) # assign offspring proportionally to species fitness
     for iSpec in range(nSpecies):
       species[iSpec].nOffspring = offspring[iSpec]
       
@@ -205,7 +206,7 @@ def compatDist(self, ref, ind):
   ind[3,np.isnan(ind[3,:])] = 0
   ref[3,np.isnan(ref[3,:])] = 0
   weightDiff = abs(ind[3,IA] - ref[3,IB])
-  geneDiff   = sum(np.invert(IA)) + sum(np.invert(IB))
+  geneDiff   = sum(np.invert(IA)) + sum(np.invert(IB)) # |A + B| - |A ∩ B|
 
   # Normalize and take weighted sum
   nInitial = self.p['ann_nInput'] + self.p['ann_nOutput']

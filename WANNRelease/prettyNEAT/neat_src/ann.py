@@ -329,7 +329,7 @@ def importNet(fileName):
 
 class LayeredWANN(nn.Module): # ToBeTested
   
-    def __init__(self, weights, aVec, nInput, nOutput):
+    def __init__(self, weights: torch.Tensor, aVec: torch.Tensor, nInput: int, nOutput: int):
         super().__init__()
         
         # Convert numpy arrays to torch if needed
@@ -354,8 +354,6 @@ class LayeredWANN(nn.Module): # ToBeTested
             
             # Create sparse linear layer
             sparse_layer = SparseLinear(
-                in_features=curr_mask.sum(),
-                out_features=next_mask.sum(),
                 weight_matrix=layer_weights
             )
             self.layers.append(sparse_layer)
@@ -401,7 +399,7 @@ class LayeredWANN(nn.Module): # ToBeTested
         return applyAct(act_id, x)
 
 class SparseLinear(nn.Module):
-    def __init__(self, in_features, out_features, weight_matrix):
+    def __init__(self, weight_matrix):
         super().__init__()
         
         # Create mask for non-zero weights

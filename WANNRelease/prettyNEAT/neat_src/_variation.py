@@ -48,7 +48,7 @@ def recombine(self, species, innov, gen):
   pop = species.members
   children = []
  
-  # Sort by rank
+  # Sort by rank (ascending order)
   pop.sort(key=lambda x: x.rank)
 
   # Cull  - eliminate worst individuals from breeding pool
@@ -68,7 +68,7 @@ def recombine(self, species, innov, gen):
   parentA = np.random.randint(len(pop),size=(nOffspring,p['select_tournSize']))
   parentB = np.random.randint(len(pop),size=(nOffspring,p['select_tournSize']))
   parents = np.vstack( (np.min(parentA,1), np.min(parentB,1) ) )
-  parents = np.sort(parents,axis=0) # Higher fitness parent first    
+  parents = np.sort(parents,axis=0) # Higher fitness parent (mother or father) first    
   
   # Breed child population
   for i in range(nOffspring):  

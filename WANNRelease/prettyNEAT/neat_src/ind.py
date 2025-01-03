@@ -61,7 +61,7 @@ class Ind():
     """Converts genes to weight matrix and activation vector
     """
     order, wMat = getNodeOrder(self.node, self.conn)
-    if order is not False:
+    if order is not False: # no cyclic connections
       self.wMat = wMat
       self.aVec = self.node[2,order]
 
@@ -94,7 +94,7 @@ class Ind():
         innov  - (np_array) - updated innovation record
 
     """  
-    if mate is not None:
+    if mate is not None: # crossover if mate else mutation
       child = self.crossover(mate)
     else:
       child = Ind(self.conn, self.node)
@@ -127,8 +127,13 @@ class Ind():
         child   - (Ind) - newly created individual
 
     """
-    parentA = self
-    parentB = mate
+    # Determine which parent is more fit
+    if mate.fitness > self.fitness:
+        parentA = mate    # Higher fitness parent
+        parentB = self    # Lower fitness parent
+    else:
+        parentA = self    # Higher fitness parent
+        parentB = mate    # Lower fitness parent
 
     # Inherit all nodes and connections from most fit parent
     child = Ind(parentA.conn, parentA.node)

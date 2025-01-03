@@ -92,6 +92,8 @@ def quickINTersect(A,B):
     print(quickINTersect(A,B))
     print(quickINTersect(B,C))
     print(quickINTersect(B,D))
+    
+  Intersection between A and B, masked within A and B respectively
   """
   if (len(A) is 0) or (len(B) is 0):
     return [],[]
