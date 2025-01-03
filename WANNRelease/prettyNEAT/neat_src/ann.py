@@ -1,4 +1,6 @@
 import numpy as np
+import torch
+import torch.nn as nn
 
 
 # -- ANN Ordering -------------------------------------------------------- -- #
@@ -86,6 +88,7 @@ def getNodeOrder(nodeG,connG):
   
   return Q, wMat
 
+
 def getLayer(wMat):
   """Get layer of each node in weight matrix
   Traverse wMat by row, collecting layer of all nodes that connect to you (X).
@@ -160,18 +163,17 @@ def act(weights, aVec, nInput, nOutput, inPattern):
       nSamples = 1
 
   # Run input pattern through ANN    
-  nodeAct  = np.zeros((nSamples,nNodes))
+  nodeAct  = np.zeros((nSamples,nNodes)) # Store activation of each node
   nodeAct[:,0] = 1 # Bias activation
-  nodeAct[:,1:nInput+1] = inPattern
+  nodeAct[:,1:nInput+1] = inPattern # Prepare input node activation
 
   # Propagate signal through hidden to output nodes
-  iNode = nInput+1
   for iNode in range(nInput+1,nNodes):
       rawAct = np.dot(nodeAct, wMat[:,iNode]).squeeze()
-      nodeAct[:,iNode] = applyAct(aVec[iNode], rawAct) 
-      #print(nodeAct)
+      nodeAct[:,iNode] = applyAct(aVec[iNode], rawAct) # Looping sparse dot-product to compute each node's activation
   output = nodeAct[:,-nOutput:]   
   return output
+
 
 def applyAct(actId, x):
   """Returns value after an activation function is applied
@@ -324,3 +326,93 @@ def importNet(fileName):
 
   return wVec, aVec, wKey
 
+
+class LayeredWANN(nn.Module): # ToBeTested
+  
+    def __init__(self, weights, aVec, nInput, nOutput):
+        super().__init__()
+        
+        # Convert numpy arrays to torch if needed
+        if not torch.is_tensor(weights):
+            weights = torch.from_numpy(weights).float()
+        if not torch.is_tensor(aVec):
+            aVec = torch.from_numpy(aVec).long()
+            
+        # Get layer information
+        self.node_layers = torch.from_numpy(getLayer(weights.numpy())).long()
+        n_layers = self.node_layers.max() + 1
+        
+        # Create sparse layers
+        self.layers = nn.ModuleList()
+        for layer_idx in range(n_layers):
+            # Get nodes in current and next layer
+            curr_mask = self.node_layers == layer_idx
+            next_mask = self.node_layers == (layer_idx + 1)
+            
+            # Extract relevant weights
+            layer_weights = weights[curr_mask][:, next_mask]
+            
+            # Create sparse linear layer
+            sparse_layer = SparseLinear(
+                in_features=curr_mask.sum(),
+                out_features=next_mask.sum(),
+                weight_matrix=layer_weights
+            )
+            self.layers.append(sparse_layer)
+            
+        # Store activation functions per node
+        self.aVec = aVec
+        self.nInput = nInput
+        self.nOutput = nOutput
+        
+    def forward(self, x):
+        # Initial node activations
+        batch_size = x.shape[0]
+        all_activations = torch.zeros(
+            batch_size, 
+            len(self.node_layers), 
+            device=x.device
+        )
+        all_activations[:, 0] = 1  # Bias
+        all_activations[:, 1:self.nInput+1] = x
+        
+        # Process each layer
+        for layer_idx, layer in enumerate(self.layers):
+            curr_mask = self.node_layers == layer_idx
+            next_mask = self.node_layers == (layer_idx + 1)
+            
+            # Forward through sparse layer
+            curr_activations = all_activations[:, curr_mask]
+            next_raw = layer(curr_activations)
+            
+            # Apply activation functions
+            next_nodes = torch.where(next_mask)[0]
+            for i, node_idx in enumerate(next_nodes):
+                act_fn = self.aVec[node_idx]
+                next_raw[:, i] = self.apply_act(act_fn, next_raw[:, i])
+            
+            all_activations[:, next_mask] = next_raw
+            
+        return all_activations[:, -self.nOutput:]
+    
+    @staticmethod
+    def apply_act(act_id, x):
+        # Same as before
+        return applyAct(act_id, x)
+
+class SparseLinear(nn.Module):
+    def __init__(self, in_features, out_features, weight_matrix):
+        super().__init__()
+        
+        # Create mask for non-zero weights
+        self.mask = (weight_matrix != 0)
+        
+        # Initialize weights using the non-zero values
+        weights = torch.zeros_like(weight_matrix)
+        weights[self.mask] = weight_matrix[self.mask]
+        self.weight = nn.Parameter(weights)
+        
+    def forward(self, x):
+        # Apply mask during forward pass
+        masked_weight = self.weight * self.mask
+        return torch.matmul(x, masked_weight)
