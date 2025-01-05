@@ -413,3 +413,12 @@ class SparseLinear(nn.Module):
         # Apply mask during forward pass
         masked_weight = self.weight * self.mask
         return torch.matmul(x, masked_weight)
+      
+      
+def obtainOutgoingConnections(connG, node_id): 
+  if connG is not None: 
+    srcIndx = np.where(connG[1,:]==node_id)[0]
+    exist = connG[2,srcIndx]
+    return exist
+  else:
+    return []

@@ -1,6 +1,6 @@
 import numpy as np
 import copy
-from .ann import getLayer, getNodeOrder
+from .ann import getLayer, getNodeOrder, obtainOutgoingConnections
 
 
 class Ind():
@@ -378,16 +378,11 @@ class Ind():
       srcLayer = nodeKey[src,1] # take source node according to index
       dest = np.where(nodeKey[:,1] > srcLayer)[0] # pick all nodes in higher layers
       
-      # Finding already existing connections:
-      #   ) take all connection genes with this source (connG[1,:])
-      #   ) take the destination of those genes (connG[2,:])
-      #   ) convert to nodeKey index (Gotta be a better numpy way...)   
-      srcIndx = np.where(connG[1,:]==nodeKey[src,0])[0]
-      exist = connG[2,srcIndx]
-      existKey = []
-      for iExist in exist:
-        existKey.append(np.where(nodeKey[:,0]==iExist)[0])
-      dest = np.setdiff1d(dest,existKey) # Remove existing connections
+      # remove pre-existing outgoing connections
+      exist_conn = obtainOutgoingConnections(connG, nodeKey[src, 0])
+      exist_innov = obtainOutgoingConnections(innov, nodeKey[src, 0])
+      exist = np.unique(np.hstack((exist_conn, exist_innov)))
+      dest = np.setdiff1d(dest, exist)
       
       # Add a random valid connection
       np.random.shuffle(dest)
@@ -402,8 +397,8 @@ class Ind():
 
         # Record innovation
         if innov is not None:
-          newInnov = np.hstack((connNew[0:3].flatten(), -1, gen))
-          innov = np.hstack((innov,newInnov[:,None]))
+          newInnov = np.hstack((connNew[0:3].flatten(), -1, gen)) # (5,)
+          innov = np.hstack((innov,newInnov[:,None])) # (5, ...)
         break;
 
     return connG, innov
