@@ -349,6 +349,9 @@ class Ind():
       innov    - (np_array) - updated innovation record
 
     """
+    # 1. never check existence within Innov 
+    # 2. questionable use of setdiff1d ... 
+    
     if innov is None:
       newConnId = connG[0,-1]+1
     else:
@@ -358,20 +361,22 @@ class Ind():
     nOuts = len(nodeG[0,nodeG[1,:] == 2])
     order, wMat = getNodeOrder(nodeG, connG)   # Topological Sort of Network
     hMat = wMat[nIns:-nOuts,nIns:-nOuts]
-    hLay = getLayer(hMat)+1
+    hLay = getLayer(hMat)+1 # hidden node layer number
 
     # To avoid recurrent connections nodes are sorted into layers, and connections are only allowed from lower to higher layers
     if len(hLay) > 0:
-      lastLayer = max(hLay)+1
+      lastLayer = max(hLay)+1 # output node layer number
     else:
-      lastLayer = 1
-    L = np.r_[np.zeros(nIns), hLay, np.full((nOuts),lastLayer) ]
-    nodeKey = np.c_[nodeG[0,order], L] # Assign Layers
+      lastLayer = 1 # output node layer number 
+      
+    L = np.r_[np.zeros(nIns), hLay, np.full((nOuts),lastLayer) ] # Assign layer number to each node
+    
+    nodeKey = np.c_[nodeG[0,order], L] # node key: node id and layer number (ordered by layer number)
 
-    sources = np.random.permutation(len(nodeKey))
+    sources = np.random.permutation(len(nodeKey)) # node index permutation
     for src in sources:
-      srcLayer = nodeKey[src,1]
-      dest = np.where(nodeKey[:,1] > srcLayer)[0]
+      srcLayer = nodeKey[src,1] # take source node according to index
+      dest = np.where(nodeKey[:,1] > srcLayer)[0] # pick all nodes in higher layers
       
       # Finding already existing connections:
       #   ) take all connection genes with this source (connG[1,:])

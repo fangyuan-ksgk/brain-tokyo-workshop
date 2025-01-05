@@ -66,15 +66,15 @@ def getNodeOrder(nodeG,connG):
   # Topological Sort of Hidden Nodes (according to connection matrix)
   # Q : sorted "local index" of hidden nodes (smallest index 0)
   edge_in = np.sum(connMat,axis=0) # sum of edges ending with each node
-  Q = np.where(edge_in==0)[0]  # Start with nodes with no incoming connections
+  Q = np.where(edge_in==0)[0]  # array of node ids with no incoming connections
   for i in range(len(connMat)):
       if (len(Q) == 0) or (i >= len(Q)):
           Q = []
           # return False, False # Cycle found, can't sort
       edge_out = connMat[Q[i],:]
-      edge_in  = edge_in - edge_out # Remove nodes' conns from total
-      nextNodes = np.setdiff1d(np.where(edge_in==0)[0], Q)
-      Q = np.hstack((Q,nextNodes))
+      edge_in  = edge_in - edge_out # Remove previous layer nodes' conns from total
+      nextNodes = np.setdiff1d(np.where(edge_in==0)[0], Q) # Exclude previous layer nodes
+      Q = np.hstack((Q,nextNodes)) # Add next layer nodes to Q
 
       if sum(edge_in) == 0:
           break
@@ -111,15 +111,14 @@ def getLayer(wMat):
   wMat[wMat!=0]=1
   nNode = np.shape(wMat)[0]
   layer = np.zeros((nNode))
-  while (True): # Loop until sorting is stable
+  
+  while True: 
     prevOrder = np.copy(layer)
-    for curr in range(nNode):
-      srcLayer=np.zeros((nNode))
-      for src in range(nNode):
-        srcLayer[src] = layer[src]*wMat[src,curr]   
-      layer[curr] = np.max(srcLayer)+1    
-    if all(prevOrder==layer):
+    srcLayer = (wMat.T * layer[np.newaxis,:])
+    layer = np.max(srcLayer,axis=1)+1
+    if np.array_equal(prevOrder,layer):
       break
+    
   return layer-1
 
 
